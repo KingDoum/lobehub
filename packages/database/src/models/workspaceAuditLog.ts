@@ -50,6 +50,7 @@ interface ListAuditLogParams {
   endDate?: Date;
   limit?: number;
   q?: string;
+  resourceType?: string;
   startDate?: Date;
   userIds?: string[];
   workspaceId: string;
@@ -79,9 +80,20 @@ export class WorkspaceAuditLogModel {
   };
 
   list = async (params: ListAuditLogParams) => {
-    const { workspaceId, action, startDate, endDate, cursor, q, userIds = [], limit = 50 } = params;
+    const {
+      workspaceId,
+      action,
+      resourceType,
+      startDate,
+      endDate,
+      cursor,
+      q,
+      userIds = [],
+      limit = 50,
+    } = params;
     const conditions = [eq(workspaceAuditLogs.workspaceId, workspaceId)];
     if (action) conditions.push(eq(workspaceAuditLogs.action, action));
+    if (resourceType) conditions.push(eq(workspaceAuditLogs.resourceType, resourceType));
     if (startDate) conditions.push(gte(workspaceAuditLogs.createdAt, startDate));
     if (endDate) conditions.push(lte(workspaceAuditLogs.createdAt, endDate));
     if (cursor) conditions.push(lt(workspaceAuditLogs.createdAt, cursor));
