@@ -104,6 +104,8 @@ export default {
   'credits.autoTopUp.upgradeHint': 'Subscribe to a paid plan to enable auto top-up',
   'credits.autoTopUp.validation.targetMustExceedThreshold':
     'Target balance must be greater than threshold',
+  'credits.memberBudget.actions.addRule': 'Add rule',
+  'credits.memberBudget.actions.removeRule': 'Remove rule',
   'credits.memberBudget.actions.restoreDefault': 'Restore default',
   'credits.memberBudget.actions.saveDefault': 'Save',
   'credits.memberBudget.actions.setCustom': 'Set custom',
@@ -116,11 +118,14 @@ export default {
     'Limit how many workspace credits each member can use in the current billing cycle',
   'credits.memberBudget.effectiveBudget': 'Effective budget',
   'credits.memberBudget.empty': 'No workspace members yet',
+  'credits.memberBudget.noRules':
+    'No budget rules. Members can use workspace credits without per-member limits.',
   'credits.memberBudget.saveError': 'Failed to save member budget settings',
   'credits.memberBudget.saveSuccess': 'Member budget settings saved',
   'credits.memberBudget.status.custom': 'Custom',
   'credits.memberBudget.status.inherit': 'Inherits default',
   'credits.memberBudget.status.unlimited': 'Unlimited',
+  'credits.memberBudget.target.allMembers': 'All members',
   'credits.memberBudget.title': 'Member Budget Control',
   'credits.memberBudget.unlimited': 'Unlimited',
   'credits.costEstimateHint.desc':
