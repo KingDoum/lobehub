@@ -118,8 +118,11 @@ export default {
     'Limit how many workspace credits each member can use in the current billing cycle',
   'credits.memberBudget.effectiveBudget': 'Effective budget',
   'credits.memberBudget.empty': 'No workspace members yet',
+  'credits.memberBudget.globalBadge': 'Global',
   'credits.memberBudget.noRules':
     'No budget rules. Members can use workspace credits without per-member limits.',
+  'credits.memberBudget.ruleLimit': 'Budget limit',
+  'credits.memberBudget.ruleTarget': 'Rule target',
   'credits.memberBudget.saveError': 'Failed to save member budget settings',
   'credits.memberBudget.saveSuccess': 'Member budget settings saved',
   'credits.memberBudget.status.custom': 'Custom',
@@ -128,6 +131,8 @@ export default {
   'credits.memberBudget.target.allMembers': 'All members',
   'credits.memberBudget.title': 'Member Budget Control',
   'credits.memberBudget.unlimited': 'Unlimited',
+  'credits.memberBudget.unlimitedMemberHint':
+    'Set an all-members rule first before adding an unlimited override for a single member.',
   'credits.costEstimateHint.desc':
     'Show a lightweight warning before sending when the estimated model cost reaches your threshold',
   'credits.costEstimateHint.saveError': 'Failed to save cost estimate alert settings',
