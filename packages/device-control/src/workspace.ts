@@ -49,29 +49,85 @@ const listSkillFilesRecursive = async (dir: string): Promise<string[]> => {
   return results.sort();
 };
 
+const stripQuotedScalar = (value: string) => {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+
+  return value;
+};
+
+const countLeadingSpaces = (value: string) => value.match(/^ */)?.[0].length ?? 0;
+
+const normalizeBlockScalar = (lines: string[], style: 'folded' | 'literal') => {
+  const nonEmptyIndents = lines
+    .filter((line) => line.trim().length > 0)
+    .map((line) => countLeadingSpaces(line));
+  const indent = Math.min(...nonEmptyIndents, Number.POSITIVE_INFINITY);
+  const normalized = lines.map((line) =>
+    Number.isFinite(indent) && line.length >= indent ? line.slice(indent) : line.trimStart(),
+  );
+
+  if (style === 'literal') return normalized.join('\n').trim();
+
+  const paragraphs: string[] = [];
+  let current: string[] = [];
+
+  for (const line of normalized) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      if (current.length > 0) {
+        paragraphs.push(current.join(' '));
+        current = [];
+      }
+      continue;
+    }
+    current.push(trimmed);
+  }
+
+  if (current.length > 0) paragraphs.push(current.join(' '));
+
+  return paragraphs.join('\n').trim();
+};
+
 /**
- * Parse a minimal YAML frontmatter block for SKILL.md files. Only handles
- * `key: value` lines; multi-line block scalars fall back to the first line.
+ * Parse a minimal YAML frontmatter block for SKILL.md files. Handles plain
+ * `key: value` scalars and the folded/literal block scalar forms commonly used
+ * by skills (`description: >` and `description: |`).
  */
 const parseSkillFrontmatter = (raw: string): Record<string, string> => {
   const match = raw.match(SKILL_FRONTMATTER_RE);
   if (!match) return {};
 
   const fields: Record<string, string> = {};
-  for (const line of match[1].split(/\r?\n/)) {
+  const lines = match[1].split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     const colonIdx = line.indexOf(':');
     if (colonIdx === -1) continue;
     const key = line.slice(0, colonIdx).trim();
     if (!key || key.startsWith('#')) continue;
-    let value = line.slice(colonIdx + 1).trim();
-    if (value.startsWith('|') || value.startsWith('>')) continue;
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
+    const value = line.slice(colonIdx + 1).trim();
+
+    if (value.startsWith('|') || value.startsWith('>')) {
+      const style = value.startsWith('>') ? 'folded' : 'literal';
+      const blockLines: string[] = [];
+
+      while (index + 1 < lines.length) {
+        const nextLine = lines[index + 1];
+        if (nextLine.trim() && countLeadingSpaces(nextLine) === 0) break;
+        blockLines.push(nextLine);
+        index += 1;
+      }
+
+      fields[key] = normalizeBlockScalar(blockLines, style);
+      continue;
     }
-    fields[key] = value;
+
+    fields[key] = stripQuotedScalar(value);
   }
   return fields;
 };
