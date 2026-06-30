@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt, lte } from 'drizzle-orm';
+import { and, desc, eq, gte, ilike, inArray, lt, lte, or } from 'drizzle-orm';
 
 import { workspaceAuditLogs } from '../schemas/workspace';
 import type { LobeChatDatabase } from '../type';
@@ -49,7 +49,9 @@ interface ListAuditLogParams {
   cursor?: Date;
   endDate?: Date;
   limit?: number;
+  q?: string;
   startDate?: Date;
+  userIds?: string[];
   workspaceId: string;
 }
 
@@ -77,12 +79,23 @@ export class WorkspaceAuditLogModel {
   };
 
   list = async (params: ListAuditLogParams) => {
-    const { workspaceId, action, startDate, endDate, cursor, limit = 50 } = params;
+    const { workspaceId, action, startDate, endDate, cursor, q, userIds = [], limit = 50 } = params;
     const conditions = [eq(workspaceAuditLogs.workspaceId, workspaceId)];
     if (action) conditions.push(eq(workspaceAuditLogs.action, action));
     if (startDate) conditions.push(gte(workspaceAuditLogs.createdAt, startDate));
     if (endDate) conditions.push(lte(workspaceAuditLogs.createdAt, endDate));
     if (cursor) conditions.push(lt(workspaceAuditLogs.createdAt, cursor));
+    const keyword = q?.trim();
+    if (keyword) {
+      const searchConditions = [
+        ilike(workspaceAuditLogs.action, `%${keyword}%`),
+        ilike(workspaceAuditLogs.resourceType, `%${keyword}%`),
+        ilike(workspaceAuditLogs.resourceId, `%${keyword}%`),
+        ilike(workspaceAuditLogs.ipAddress, `%${keyword}%`),
+      ];
+      if (userIds.length > 0) searchConditions.push(inArray(workspaceAuditLogs.userId, userIds));
+      conditions.push(or(...searchConditions)!);
+    }
 
     const rows = await this.db.query.workspaceAuditLogs.findMany({
       limit: limit + 1,

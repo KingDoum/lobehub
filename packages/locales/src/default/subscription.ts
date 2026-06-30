@@ -104,6 +104,25 @@ export default {
   'credits.autoTopUp.upgradeHint': 'Subscribe to a paid plan to enable auto top-up',
   'credits.autoTopUp.validation.targetMustExceedThreshold':
     'Target balance must be greater than threshold',
+  'credits.memberBudget.actions.restoreDefault': 'Restore default',
+  'credits.memberBudget.actions.saveDefault': 'Save',
+  'credits.memberBudget.actions.setCustom': 'Set custom',
+  'credits.memberBudget.actions.setUnlimited': 'Set unlimited',
+  'credits.memberBudget.currentSpend': 'Current spend',
+  'credits.memberBudget.defaultLimit': 'Default member budget',
+  'credits.memberBudget.defaultLimitHint':
+    'Members without a custom override inherit this limit each billing cycle.',
+  'credits.memberBudget.desc':
+    'Limit how many workspace credits each member can use in the current billing cycle',
+  'credits.memberBudget.effectiveBudget': 'Effective budget',
+  'credits.memberBudget.empty': 'No workspace members yet',
+  'credits.memberBudget.saveError': 'Failed to save member budget settings',
+  'credits.memberBudget.saveSuccess': 'Member budget settings saved',
+  'credits.memberBudget.status.custom': 'Custom',
+  'credits.memberBudget.status.inherit': 'Inherits default',
+  'credits.memberBudget.status.unlimited': 'Unlimited',
+  'credits.memberBudget.title': 'Member Budget Control',
+  'credits.memberBudget.unlimited': 'Unlimited',
   'credits.costEstimateHint.desc':
     'Show a lightweight warning before sending when the estimated model cost reaches your threshold',
   'credits.costEstimateHint.saveError': 'Failed to save cost estimate alert settings',
