@@ -58,7 +58,14 @@ jobs:
 
       - name: Save image as artifact
         run: |
-          docker save ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }} | gzip > lobe-image.tar.gz
+          # Find image by repository name (the image has multiple tags from metadata-action)
+          IMAGE=$(docker images "ghcr.io/kingdoum/lobehub" -q | head -1)
+          if [ -z "$IMAGE" ]; then
+            echo "ERROR: image not found locally"
+            docker images | head -10
+            exit 1
+          fi
+          docker save "$IMAGE" | gzip > lobe-image.tar.gz
           echo "Image size: $(du -sh lobe-image.tar.gz | cut -f1)"
 
       - name: Upload artifact
