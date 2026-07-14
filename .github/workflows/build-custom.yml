@@ -54,3 +54,15 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Save image as artifact
+        run: |
+          docker save ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }} | gzip > lobe-image.tar.gz
+          echo "Image size: $(du -sh lobe-image.tar.gz | cut -f1)"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lobehub-custom-image
+          path: lobe-image.tar.gz
+          retention-days: 7
