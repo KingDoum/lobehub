@@ -34,6 +34,7 @@ import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { parseMemoryExtractionConfig } from '@/server/globalConfig/parseMemoryExtractionConfig';
 import {
   buildWorkflowPayloadInput,
+  MemoryExtractionExecutor,
   MemoryExtractionWorkflowService,
   normalizeMemoryExtractionPayload,
 } from '@/server/services/memory/userMemory/extract';
@@ -300,39 +301,122 @@ export const userMemoryRouter = router({
       const baseUrl = webhook.baseUrl || appEnv.INTERNAL_APP_URL || appEnv.APP_URL;
 
       try {
-        const { workflowRunId } = await MemoryExtractionWorkflowService.triggerProcessUsers(
-          buildWorkflowPayloadInput(
-            normalizeMemoryExtractionPayload({
-              asyncTaskId: taskId,
-              baseUrl,
-              forceAll: false,
-              forceTopics: false,
-              fromDate: input.fromDate,
-              mode: 'workflow',
-              sources: [MemorySourceType.ChatTopic],
-              toDate: input.toDate,
-              userIds: [ctx.userId],
-              userInitiated: true,
-            }),
-          ),
-          { extraHeaders: upstashWorkflowExtraHeaders },
+        const MAX_TOPICS = 10;
+        console.log(
+          '[memory-extraction] starting direct extraction for user',
+          ctx.userId,
+          'range:',
+          input.fromDate,
+          '~',
+          input.toDate,
         );
 
-        await ctx.asyncTaskModel.update(taskId, {
-          metadata: {
+        // 1. 创建 executor
+        const executor = await MemoryExtractionExecutor.create();
+
+        // 2. 获取用户的话题列表（按日期范围）
+        const topicBatch = await executor.getTopicsForUser(
+          {
+            userId: ctx.userId,
+            workspaceId: ctx.workspaceId,
+            from: input.fromDate,
+            to: input.toDate,
+            forceAll: false,
+            forceTopics: false,
+          },
+          MAX_TOPICS,
+        );
+
+        // 3. 没有话题可处理
+        if (topicBatch.ids.length === 0) {
+          console.log('[memory-extraction] no topics to process for user', ctx.userId);
+          await ctx.asyncTaskModel.update(taskId, { metadata: {
+              ...metadata,
+              progress: { completedTopics: 0, totalTopics },
+            } as UserMemoryExtractionMetadata,
+            status: AsyncTaskStatus.Success,
+          });
+          return {
+            deduped: false,
+            id: taskId,
+            metadata: metadata as UserMemoryExtractionMetadata,
+            status: AsyncTaskStatus.Success as AsyncTaskStatus,
+          };
+        }
+
+        // 4. 逐个处理话题（带错误隔离）
+        const processedTopics: string[] = [];
+        const failedTopics: { topicId: string; error: string }[] = [];
+
+        for (const topicId of topicBatch.ids) {
+          try {
+            console.log('[memory-extraction] processing topic', topicId, '...');
+            const extracted = await executor.extractTopic({
+              topicId,
+              userId: ctx.userId,
+              workspaceId: ctx.workspaceId,
+              source: MemorySourceType.ChatTopic,
+              layers: [],
+              forceAll: false,
+              forceTopics: false,
+              from: input.fromDate,
+              to: input.toDate,
+              asyncTaskId: taskId,
+              userInitiated: true,
+              reportProgress: true,
+            });
+            processedTopics.push(topicId);
+            console.log(
+              '[memory-extraction] topic',
+              topicId,
+              'done: extracted=',
+              extracted.extracted,
+              'memoryIds=',
+              extracted.memoryIds.length,
+            );
+          } catch (error) {
+            console.error('[memory-extraction] topic', topicId, 'FAILED:', error);
+            failedTopics.push({ topicId, error: String(error) });
+          }
+        }
+
+        // 5. 更新 async_task 状态
+        const finalStatus =
+          failedTopics.length > processedTopics.length
+            ? AsyncTaskStatus.Error
+            : AsyncTaskStatus.Success;
+
+        await ctx.asyncTaskModel.update(taskId, { metadata: {
             ...metadata,
-            control: {
-              upstash: {
-                workflowRunIds: workflowRunId ? [workflowRunId] : [],
-              },
-            },
+            progress: { completedTopics: processedTopics.length, totalTopics },
           } as UserMemoryExtractionMetadata,
+          status: finalStatus,
         });
+
+        console.log(
+          '[memory-extraction] extraction complete:',
+          processedTopics.length,
+          'ok,',
+          failedTopics.length,
+          'failed',
+        );
+        if (failedTopics.length > 0) {
+          console.error('[memory-extraction] failed details:', JSON.stringify(failedTopics));
+        }
+
+        return {
+          deduped: false,
+          id: taskId,
+          metadata: metadata as UserMemoryExtractionMetadata,
+          status: finalStatus as AsyncTaskStatus,
+        };
       } catch (error) {
+        console.error('[memory-extraction] FATAL error in requestMemoryFromChatTopic:', error);
         await ctx.asyncTaskModel.update(taskId, {
           error: new AsyncTaskError(
             AsyncTaskErrorType.TaskTriggerError,
-            'Failed to schedule memory extraction workflow',
+            'Failed to execute memory extraction: ' +
+              (error instanceof Error ? error.message : String(error)),
           ),
           status: AsyncTaskStatus.Error,
         });
@@ -342,13 +426,6 @@ export const userMemoryRouter = router({
           message: 'Failed to trigger user memory extraction',
         });
       }
-
-      return {
-        deduped: false,
-        id: taskId,
-        metadata: metadata as UserMemoryExtractionMetadata,
-        status: AsyncTaskStatus.Pending,
-      };
     }),
 
   restorePersonaVersion: personalUserMemoryWriteProcedure
