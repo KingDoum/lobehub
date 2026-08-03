@@ -1,6 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
@@ -120,15 +120,40 @@ export async function runScheduleTick(
     }
   }
 
+  // ── Atomic lock: prevent concurrent schedule ticks ──
+  // Only transition to 'running' if the task is still in a dispatchable state.
+  // This is the gate that prevents 30 parallel QStash deliveries from all
+  // creating topics for the same task. Database-level atomic UPDATE ensures
+  // exactly one tick wins; the rest return 'in-flight'.
+  const [locked] = await db
+    .update(tasks)
+    .set({ status: 'running', startedAt: new Date(), error: null })
+    .where(and(eq(tasks.id, taskId), inArray(tasks.status, ['scheduled', 'backlog'])))
+    .returning({ id: tasks.id });
+
+  if (!locked) {
+    log('skip task=%s reason=in-flight (atomic lock)', taskId);
+    return { ran: false, reason: 'in-flight' };
+  }
+
   const runner = new TaskRunnerService(db, userId, wsId);
   try {
     await runner.runTask({ taskId, trigger: 'schedule' });
   } catch (e) {
-    // Concurrent tick / manual run already running this task — graceful skip.
     if (e instanceof TRPCError && e.code === 'CONFLICT') {
       log('skip task=%s reason=in-flight', taskId);
+      // Don't reset status — another run (manual or previous tick) is already
+      // in progress and owns the running state.
       return { ran: false, reason: 'in-flight' };
     }
+    // Non-CONFLICT error: the atomic lock was acquired but runTask failed.
+    // Reset to 'scheduled' so the next tick can retry. Without this, the task
+    // would be stuck in 'running' forever.
+    log('task=%s runTask failed, resetting to scheduled: %O', taskId, e);
+    const taskModel = new TaskModel(db, userId, wsId);
+    await taskModel.updateStatus(taskId, 'scheduled', {
+      error: e instanceof Error ? e.message : 'Unknown error',
+    });
     throw e;
   }
   log('ran task=%s identifier=%s', taskId, task.identifier);
