@@ -2,8 +2,8 @@ export const DEFAULT_EMBEDDING_PROVIDER = 'openai';
 
 export const DEFAULT_MODEL = 'deepseek-v4-flash';
 export const DEFAULT_PROVIDER = 'deepseek';
-export const DEFAULT_MINI_MODEL = 'gpt-5.6-luna';
-export const DEFAULT_MINI_PROVIDER = 'openai';
+export const DEFAULT_MINI_MODEL = 'deepseek-v4-flash';
+export const DEFAULT_MINI_PROVIDER = 'newapi';
 
 /**
  * The speech-to-text model that transcribes voice messages for runtimes that only take text
