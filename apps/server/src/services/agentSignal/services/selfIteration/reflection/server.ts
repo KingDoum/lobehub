@@ -93,6 +93,7 @@ export const createServerSelfReflectionPolicyOptions = ({
         AGENT_SIGNAL_DEFAULTS.receiptTtlSeconds,
       ),
     canRunReview: async (input) => {
+      if (process.env.SELF_REFLECTION_DISABLED === '1') return false;
       if (input.userId !== userId) return false;
 
       return canRunSelfIterationSource({
