@@ -959,6 +959,7 @@ export const createServerSelfReviewPolicyOptions = ({
       ),
     canRunReview: async (input) => {
       if (!selfIterationEnabled) return false;
+      if (process.env.NIGHTLY_REVIEW_DISABLED === '1') return false;
       if (input.userId !== userId) return false;
       if (agentId && input.agentId !== agentId) return false;
       if (!(await isAgentSignalEnabledForUser(db, userId))) return false;
