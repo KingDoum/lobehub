@@ -185,6 +185,15 @@ const QSTASH_SCHEDULES = [
 const createQstashSchedule = async () => {
   const QSTASH_URL = process.env.QSTASH_URL || 'https://qstash-eu-central-1.upstash.io';
 
+  // Skip if using downstash (local QStash mock) — it doesn't support the
+  // /v2/schedules/ API. The schedule dispatch falls through to the local
+  // inline mode (runScheduleTick / LocalTaskScheduler) which handles the
+  // same work without QStash.
+  if (QSTASH_URL.includes('downstash') || QSTASH_URL.includes('172.') || QSTASH_URL.includes('localhost') || QSTASH_URL.includes('127.0.0.1')) {
+    console.log('✅ QStash: Local mode detected. Schedule dispatch handled by local scheduler.');
+    return;
+  }
+
   const QSTASH_TOKEN = process.env.QSTASH_TOKEN;
   if (!QSTASH_TOKEN) {
     console.warn('⚠️ QStash: QSTASH_TOKEN not set. Skipping schedule creation.');
