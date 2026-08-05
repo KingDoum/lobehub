@@ -18,8 +18,8 @@ export const NIGHTLY_REVIEW: BuiltinAgentDefinition = {
   // Background self-iteration runs on the cheap mini system model (matching the
   // legacy executeSelfIteration path), not the user's default chat model.
   persist: {
-    model: DEFAULT_MINI_MODEL,
-    provider: DEFAULT_MINI_PROVIDER,
+    model: process.env.NIGHTLY_REVIEW_MODEL || DEFAULT_MINI_MODEL,
+    provider: process.env.NIGHTLY_REVIEW_PROVIDER || DEFAULT_MINI_PROVIDER,
   },
   runtime: {
     plugins: ['agent-signal-review'],
