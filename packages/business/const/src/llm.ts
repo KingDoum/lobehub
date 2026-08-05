@@ -6,8 +6,8 @@ export const DEFAULT_EMBEDDING_PROVIDER = 'openai';
 
 export const DEFAULT_MODEL = 'deepseek-v4-flash';
 export const DEFAULT_PROVIDER = 'deepseek';
-export const DEFAULT_MINI_MODEL = 'gpt-5.6-luna';
-export const DEFAULT_MINI_PROVIDER = 'openai';
+export const DEFAULT_MINI_MODEL = 'deepseek-v4-flash';
+export const DEFAULT_MINI_PROVIDER = 'newapi';
 
 /**
  * The model that scores "is this message talking to the bot?" before a bot joins a conversation
