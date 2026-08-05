@@ -28,13 +28,6 @@ export type ScheduleTickSkipReason =
   | 'paused'
   | 'terminal';
 
-/**
- * Run a schedule tick — invoked by the QStash `/schedule-execute` HTTP handler
- * after the central `/schedule-dispatch` decided this task is due.
- *
- * DB is the authority: re-checks task state because the dispatch message may
- * arrive after the user paused, canceled, or changed the automation mode.
- */
 export async function runScheduleTick(
   taskId: string,
   userId: string,
