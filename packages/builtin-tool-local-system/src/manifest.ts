@@ -233,9 +233,9 @@ export const LocalSystemManifest: BuiltinToolManifest = {
       serializeBy: 'file_path',
     },
     {
-      defaultTimeoutMs: 60_000,
+      defaultTimeoutMs: 600_000,
       description:
-        'Start a terminal session to execute a shell command and return console output collected during the wait window (60 seconds by default, up to 600000ms via `timeout`). If the command is still running after the wait window, the result includes `shell_id` for later observation or termination.',
+        'Start a terminal session to execute a shell command and return console output collected during the wait window (10 minutes by default, up to 600000ms via `timeout`). If the command is still running after the wait window, the result includes `shell_id` for later observation or termination.',
       humanIntervention: 'required',
       name: LocalSystemApiName.runCommand,
       parameters: {
