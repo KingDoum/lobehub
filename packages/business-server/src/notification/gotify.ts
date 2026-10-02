@@ -44,6 +44,16 @@ export interface GotifyNotification {
 export const isGotifyConfigured = (): boolean =>
   Boolean(process.env.GOTIFY_URL && process.env.GOTIFY_TOKEN);
 
+/** Renders a duration in milliseconds as a short human label, or nothing when unknown. */
+export const formatDuration = (duration: number | undefined): string | undefined => {
+  if (duration === undefined) return undefined;
+
+  const totalSeconds = Math.max(0, Math.round(duration / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+
+  return minutes === 0 ? `⏱ ${totalSeconds}s` : `⏱ ${minutes}m ${totalSeconds % 60}s`;
+};
+
 /** Reads a non-negative numeric env var, falling back when unset or invalid. */
 const readNonNegativeNumber = (raw: string | undefined, fallback: number): number => {
   if (raw === undefined || raw === '') return fallback;
