@@ -764,6 +764,25 @@ export class GatewayStreamNotifier implements IStreamEventManager {
       event.type === 'agent_runtime_end' && (await this.acceptsMemberRuntimeEnd(mirrorTo))
         ? toMirroredEvent(event)
         : event;
+
+    // Persist the mirrored event into the mirror target's own stream. Member
+    // events are written only to the member's stream, which the supervisor's
+    // subscriber never reads; delivery to the supervisor happens through the
+    // Gateway push below. That push is the only durable path today, so a
+    // Gateway restart (or any dropped WebSocket) loses every member event
+    // produced while the client was away, and the conversation only reappears
+    // once a topic switch triggers a DB refetch. Writing the same event into
+    // the target's stream gives the client's reconnect cursor something to
+    // replay from. Best-effort: a storage failure must not block live delivery.
+    try {
+      await this.inner.publishStreamEvent(
+        mirrorTo,
+        mirrored as Omit<StreamEvent, 'operationId' | 'timestamp'>,
+      );
+    } catch (error) {
+      log('mirror persist failed (%s → %s): %O', event.operationId, mirrorTo, error);
+    }
+
     return this.httpPost('/api/operations/push-event', {
       event: mirrored,
       operationId: mirrorTo,
