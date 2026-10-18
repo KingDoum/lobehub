@@ -1112,6 +1112,28 @@ describe('GatewayStreamNotifier', () => {
       expect(pushes.map((p) => p.operationId)).toEqual(['op-solo']);
     });
 
+    it('persists the mirrored event into the supervisor stream so a reconnecting client can replay it', async () => {
+      await notifier.publishAgentRuntimeInit('op-member', { mirrorToOperationId: 'op-supervisor' });
+
+      await notifier.publishStreamChunk('op-member', 0, {
+        chunkType: 'text',
+        content: 'hi',
+      } as StreamChunkData);
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // Member events normally live only in the member's own stream, which the
+      // supervisor's subscriber never reads. The Gateway push is the only
+      // delivery path, so a Gateway restart loses every member event produced
+      // while the client was away — the conversation then only reappears after
+      // a topic switch triggers a DB refetch. Mirroring must therefore also
+      // append the event to the supervisor stream, giving the client's
+      // reconnect cursor something to replay from.
+      const persisted = inner.calls.publishStreamEvent.filter(([opId]) => opId === 'op-supervisor');
+      expect(persisted.length).toBeGreaterThan(0);
+      expect(persisted[0][1]).toMatchObject({ operationId: 'op-member' });
+    });
+
     it('ignores a self-referential mirror target', async () => {
       await notifier.publishAgentRuntimeInit('op-x', { mirrorToOperationId: 'op-x' });
 
